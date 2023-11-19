@@ -1,0 +1,107 @@
+{"level": 1, 
+"solo": false, 
+"roundState": 0, 
+"round": 1, 
+"scenario": "#1 Roadside Ambush", 
+"toastMessage": "", 
+"scenarioSpecialRules": [], 
+"scenarioSectionsAdded": [], 
+"currentCampaign": "Jaws of the Lion", 
+"currentList": 
+[
+    {
+        "id": "Demolitionist", 
+        "turnState": 0, 
+        "characterState": 
+        {
+            "initiative": 5, 
+            "health": 11, 
+            "maxHealth": 11, 
+            "level": 3, 
+            "xp": 0, 
+            "chill": 0, 
+            "display": 
+            "Demolitionist", 
+            "summonList": [], 
+            "conditions": [], 
+            "conditionsAddedThisTurn": [], 
+            "conditionsAddedPreviousTurn": []
+        }, 
+        "characterClass": "Demolitionist"
+    }, 
+    {
+        "id": "Common Vermling Raider", 
+        "turnState": 0, 
+        "isActive": false, 
+        "type": "Common Vermling Raider", 
+        "monsterInstances": [
+            {
+                "health": 6, 
+                "maxHealth": 10, 
+                "level": 1, 
+                "standeeNr": 1, 
+                "move": 0, 
+                "attack": 0, 
+                "range": 0, 
+                "name": "Common Vermling Raider", 
+                "gfx": "Vermling Raider", 
+                "roundSummoned": -1, 
+                "type": 1, 
+                "chill": 0, 
+                "conditions": [], 
+                "conditionsAddedThisTurn": [], 
+                "conditionsAddedPreviousTurn": []
+            }, 
+            {
+                "health": 6, 
+                "maxHealth": 10, 
+                "level": 1, 
+                "standeeNr": 3, 
+                "move": 0, 
+                "attack": 0, 
+                "range": 0, 
+                "name": "Common Vermling Raider", 
+                "gfx": "Vermling Raider", 
+                "roundSummoned": -1, 
+                "type": 1, 
+                "chill": 0, 
+                "conditions": [], 
+                "conditionsAddedThisTurn": [], 
+                "conditionsAddedPreviousTurn": []
+            }], 
+            "isAlly": false, 
+            "level": 1
+        }, 
+    {
+        "id": "Blood Monstrosity", 
+        "turnState": 0, 
+        "isActive": false, 
+        "type": "Blood Monstrosity", 
+        "monsterInstances": [
+            {
+                "health": 8, 
+                "maxHealth": 9, 
+                "level": 1, 
+                "standeeNr": 2, 
+                "move": 0, 
+                "attack": 0, 
+                "range": 0, 
+                "name": 
+                "Blood Monstrosity", 
+                "gfx": "Blood Monstrosity", 
+                "roundSummoned": -1, 
+                "type": 0, 
+                "chill": 0, 
+                "conditions": [], 
+                "conditionsAddedThisTurn": [], 
+                "conditionsAddedPreviousTurn": []
+            }], 
+            "isAlly": false, 
+            "level": 1
+    }
+], 
+"currentAbilityDecks": [{"name": "Common Vermling Raider", "drawPile": [{"nr": 375, "deck": "Common Vermling Raider"}], "discardPile": [], "lastRoundDrawn": 0}, {"name": "Monstrosity", "drawPile": [{"nr": 423, "deck": "Monstrosity"}, {"nr": 422, "deck": "Monstrosity"}, {"nr": 421, "deck": "Monstrosity"}, {"nr": 426, "deck": "Monstrosity"}, {"nr": 424, "deck": "Monstrosity"}, {"nr": 427, "deck": "Monstrosity"}, {"nr": 425, "deck": "Monstrosity"}, {"nr": 420,                "deck": "Monstrosity"}], "discardPile": [], "lastRoundDrawn": 0}],
+"modifierDeck": {"blesses": 1, "curses": 0, "enfeebles": 0, "addedMinusOnes": 0, "badOmen": 0, "drawPile": [{"gfx": "minus2"}, {"gfx": "plus0"}, {"gfx": "plus1"}, {"gfx": "plus1"}, {"gfx": "minus1"}, {"gfx": "plus0"}, {"gfx": "plus0"}, {"gfx": "minus1"}, {"gfx": "plus0"}, {"gfx": "plus0"}, {"gfx": "plus0"}, {"gfx": "minus1"}, {"gfx": "minus1"}, {"gfx": "plus1"}, {"gfx": "plus1"}, {"gfx": "minus1"}, {"gfx": "bless"}, {"gfx": "doubleAttack"}, {"gfx": "plus2"}, {"gfx": "plus1"}, {"gfx": "nullAttack"}], "discardPile": []}, 
+"modifierDeckAllies": {"blesses": 0, "curses": 0, "enfeebles": 0, "addedMinusOnes": 0, "badOmen": 0, "drawPile": [{"gfx": "minus1-allies"}, {"gfx": "plus1-allies"}, {"gfx": "doubleAttack-allies"}, {"gfx": "plus1-allies"}, {"gfx": "minus1-allies"}, {"gfx": "minus1-allies"}, {"gfx": "plus0-allies"}, {"gfx": "plus0-allies"}, {"gfx": "plus2-allies"}, {"gfx": "minus2-allies"}, {"gfx": "plus0-allies"}, {"gfx": "plus0-allies"}, {"gfx": "nullAttack-allies"}, {"gfx": "plus0-allies"}, {"gfx": "minus1-allies"}, {"gfx": "minus1-allies"}, {"gfx": "plus0-allies"}, {"gfx": "plus1-allies"}, {"gfx": "plus1-allies"}, {"gfx": "plus1-allies"}], "discardPile": []}, "lootDeck": {"drawPile": [], "discardPile": [], "addedCards": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+"enhancements": {}, "1418": false, "1419": false}, 
+"unlockedClasses": ["Demolitionist"], "showAllyDeck": false, "elementState": {"5": 2, "2": 2, "3": 2, "4": 2, "1": 2, "0": 2}}
