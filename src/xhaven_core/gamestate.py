@@ -1,9 +1,12 @@
 import logging
+import logging.handlers
 import json
 from math import log
+from os import name
 import threading
+from turtle import st
 
-from . import ClientNetwork
+from numpy import char
 
 """
 Create a gamestate class that will hold all the information about the current gamestate.
@@ -13,21 +16,54 @@ Create a gamestate class that will hold all the information about the current ga
 - Send toastmessage to Frosthaven Application
 """
 
-client_network: ClientNetwork
+# logger = logging.getLogger('xhaven_core.gamestate')
+# logger.setLevel(logging.DEBUG)
+# socket_handler = logging.handlers.SocketHandler('localhost', 19996)  # Cutelog's default port is 19996
+# logger.addHandler(socket_handler)
+
+
 class GameState:
-    def __init__(self):
-        logging.info("Initialization done")
-        self.index: int = 0
+    def __init__(self, character_names: dict) -> None:
+        self.logger = logging.getLogger("xhaven_core.gamestate.gamestate")
+        self.logger.info("Init of GameState started")
+        self.index: int = -1
         self.description = ""
         self.lock = threading.Lock()
+        
+        self.logger.info(f"Character names: {character_names}")
+        self.character_names = character_names
+
+        # Initialize all the gamestate variables
+        self.characters = []
+        self.monsters = []
+        self.level = 0
+        self.solo = False
+        self.roundState = 0
+        self.round = 0
+        self.scenario = 0
+        self.toastMessage = ""
+        self.scenarioSpecialRules = []
+        self.scenarioSectionsAdded = []
+        self.currentCampaign = 0
+        self.currentList = []
+        self.currentAbilityDecks = []
+        self.modifierDeck = []
+        self.modifierDeckAllies = []
+        self.lootDeck = []
+        self.unlockedClasses = []
+        self.showAllyDeck = False
+        self.elementState = []
+
         # Client Network is set to None by default
         # It is set to the client network class when the client network is initialized
-        self.client_network: ClientNetwork
+        self.client_network: None
 
-    def set_client_network(self, client_network):
+        self.logger.info("Init of GameState done")
+
+    def set_client_network(self, client_network) -> None:
         self.client_network = client_network
 
-    def _decode_gamestate(self, raw_gamestate_message) -> tuple[int, str, str]:
+    def _decode_gamestate(self, raw_gamestate_message: bytes) -> tuple[int, str, str]:
         # Helper method to decode gamestate message
         # This message is sent from the Frosthaven Application and contains the gamestate in byte format
         # It returns a tuple with the following information: index, description, gamestate
@@ -39,37 +75,56 @@ class GameState:
         # 2. Description:
         # 3. GameState:
         # The incoming message is in bytes, so it needs to be decoded to strings
-        print(type(raw_gamestate_message))
+        self.logger.debug(
+            "Received new gamestate message to decode",
+            extra={"raw_gamestate_message": raw_gamestate_message},
+        )
         if not b"GameState:" in raw_gamestate_message:
-            raise ValueError("Invalid gamestate message")
+            raise ValueError("Invalid gamestate message, does not contain GameState:")
+
         gamestate_index = int(
             raw_gamestate_message.split(b"Index:")[1].split(b"Description:")[0]
         )
-        gamestate_description = str(
+        gamestate_description = bytes(
             raw_gamestate_message.split(b"Description:")[1].split(b"GameState:")[0]
         )
-        gamestate_data = str(
+        gamestate_description = gamestate_description.decode("utf-8")
+        gamestate_data = bytes(
             raw_gamestate_message.split(b"GameState:")[1].split(b"[EOM]")[0]
         )
+        gamestate_data = gamestate_data.decode("utf-8")
+
         # Log the decoded gamestate message
-        logging.info(
-            f"Decoded gamestate message: {gamestate_index}, {gamestate_description}, {gamestate_data}"
+        self.logger.debug("Decoded gamestate message. Index: %s", gamestate_index)
+        self.logger.debug(
+            "Decoded gamestate message. Description: %s", gamestate_description
         )
+        self.logger.debug("Decoded gamestate message. GameState: %s", gamestate_data)
+
+        # Return the decoded gamestate message
         return (gamestate_index, gamestate_description, gamestate_data)
 
-    def _encode_gamestate(self, index: int, description: str, gamestate_data) -> bytes:
+    def _encode_gamestate(
+        self, index: int, description: str, gamestate_data: str
+    ) -> bytes:
         # Helper method to encode gamestate message
         # This message is sent to the Frosthaven Application and contains the gamestate message
         # See _decode_gamestate for more information about the format
         # The message should be returned as bytes
-        logging.info(
-            f"Encoded gamestate message: {index}, {description}, {gamestate_data}"
-        )
-        return f"S3nD:Index:{index}Description::{description}GameState:{gamestate_data}[EOM]".encode(
+
+        # Log the decoded gamestate message
+        self.logger.debug("Encode gamestate message. Index: %s", index)
+        self.logger.debug("Encode gamestate message. Description: %s", description)
+        self.logger.debug("Encode gamestate message. GameState: %s", gamestate_data)
+
+        encodexd_gamestate_message = f"S3nD:Index:{index}Description::{description}GameState:{gamestate_data}[EOM]".encode(
             "utf-8"
         )
 
-    def set_gamestate(self, new_gamestate):
+        self.logger.debug(f"Encoded gamestate message: encoded_gamestate_message")
+        return encodexd_gamestate_message
+
+    def set_gamestate(self, raw_gamestate_message: bytes) -> None:
         # Method to set the gamestate from Frosthaven Application
         # This method is called from the network class when a new gamestate is received
         # If the index is equal to the index of the current gamestate, the update from the
@@ -77,20 +132,22 @@ class GameState:
 
         with self.lock:  # Acquire the lock before modifying the gamestate
             # Decode the gamestate message
-            [index, self.description, new_gamestate] = self._decode_gamestate(
-                bytes(new_gamestate)
+            self.logger.info(
+                "Received new gamestate message",
+                extra={"gamestate": raw_gamestate_message},
+            )
+            [new_index, new_description, new_gamestate] = self._decode_gamestate(
+                raw_gamestate_message
             )
 
             # If index is equal to the index of the current gamestate, the update from the
             # speech recognition is wrong and an error should be logged (race condition)
-            if index == self.index:
-                logging.error(
-                    "Gamestate update from speech recognition system is invalid"
-                )
-            self.index = index
-            logging.info(
-                f"New gamestate received with index {self.index} and description {self.description}"
-            )
+            if self.index == new_index:
+                self.logger.error("Gamestate update is invalid, index not updated")
+
+            self.index = new_index
+            self.logger.info(f"Index updated to {new_index}")
+            self.description = new_description
 
             # Update all the gamestate variables
             gamestate_dict = json.loads(new_gamestate)
@@ -120,7 +177,7 @@ class GameState:
             # Loop through all characters and monsters in currentList and create objects for them
             for item in self.currentList:
                 if "characterState" in item:
-                    self.characters.append(Characters(item))
+                    self.characters.append(Characters(item, character_names=self.character_names))
                 elif "monsterInstances" in item:
                     self.monsters.append(Monsters(item))
 
@@ -129,7 +186,7 @@ class GameState:
             # if jsondiff.diff(tmp, self.get_gamestate()) != {}:
             #    raise AssertionError("Critical error: input and output to gamestate class are not equal.")
 
-    def get_gamestate(self):
+    def get_gamestate(self) -> str:
         # Method get the gamestate in binary format
         # to be sent to the Frosthaven Application
         self.currentList = []
@@ -160,35 +217,79 @@ class GameState:
 
         self.updated_gamestate = False
         # Encode the gamestate message before returning it
-        return self._encode_gamestate(
-            self.index,
-            self.description,
-            json.dumps(gamestate_dict),
+        self.logger.debug(
+            "Returning gamestate message", extra={"gamestate": gamestate_dict}
         )
+        return json.dumps(gamestate_dict)
+
+    # ----------------------------------------------
+    # Update methods
+    # ----------------------------------------------
 
     # Methods to update the gamestate
-    # After an update, the
-    def update_initiative(self, name, initiative):
+    def update_initiative(self, name: str, initiative: int) -> None:
         # Loop thrugh all characters and check if the name matches the characterClass
         # then update the initiative
         with self.lock:  # Acquire the lock before modifying the gamestate
-            character_updated = False
+            found_character_id = None
             for character in self.characters:
-                if character.characterClass == name:
+                self.logger.debug(f"Checking character {character.id}")
+                self.logger.debug(
+                    f"Checking character {character.characterState.display}"
+                )
+                if (
+                    name.lower() in character.id.lower()
+                    or name.lower() in character.characterState.display.lower()
+                    or name.lower() in character.name.lower()
+                ):
+                    found_character_id = character.id
                     character.characterState.initiative = initiative
-                    logging.info(f"Initiative updated for {name} to {initiative}")
-                    character_updated = True
 
             # If the character is not found, log an error
-            if not character_updated:
-                logging.error(f"Character {name} not found")
-            else:
+            if found_character_id:
                 # If the character is found, update the gamestate and send it to the Frosthaven Application
-                # also create a toast message (TODO: to be removed later)
-                self.set_toast_message(f"Initiative updated for {name} to {initiative}")
+                self.description = (
+                    f"Character {found_character_id} initiative changed to {initiative}"
+                )
                 self._update_client_network()
+            else:
+                self.logger.error(f"Character {name} not found")
+                
+    def update_character_health(self, name: str, health: int) -> None:
+        # Loop thrugh all characters and check if the name matches the characterClass
+        # then update the health
+        with self.lock:  # Acquire the lock before modifying the gamestate
+            found_character_id = None
+            for character in self.characters:
+                self.logger.debug(f"Checking character {character.id}")
+                self.logger.debug(
+                    f"Checking character {character.characterState.display}"
+                )
+                if (
+                    name.lower() in character.id.lower()
+                    or name.lower() in character.characterState.display.lower()
+                    or name.lower() in character.name.lower()
+                ):
+                    found_character_id = character.id
+                    character.characterState.health = health
+                    
+                    if character.characterState.health <= 0:
+                        self.logger.info(f"Character {character.id} killed")
+                    elif character.characterState.health > character.characterState.maxHealth:
+                        character.characterState.health = character.characterState.maxHealth
+                        self.logger.info(f"Character {character.id} health set to maximum")
+                    else:
+                        self.logger.info(f"Character {character.id} health changed to {character.characterState.health}")
+                        
+            # If the character is not found, log an error
+            if found_character_id:
+                # If the character is found, update the gamestate and send it to the Frosthaven Application
+                self.description = (
+                    f"Character {found_character_id} health changed to {health}"
+                )
+                self._update_client_network()  
 
-    def update_monster_health(self, name, instance, health_change):
+    def update_monster_health(self, type, standee_nr, health):
         # Loop through all monsters and check if the name matches the monster type
         # then check if the instance matches the monster instance
         # then change the health of the monster with the health_change
@@ -196,49 +297,63 @@ class GameState:
         # If the health becomes 0 or less, remove the monster instance
         # If the health becomes more than the maximum health, set the health to the maximum health
         with self.lock:
-            monster_updated = False
+            self.logger.debug(
+                "Trying to update monster %s, instance %s, health %s",
+                type,
+                standee_nr,
+                health,
+            )
+            found_monster_type = None
+            found_standee_nr = 0
+            new_monster_health = 0
             for monster in self.monsters:
-                if monster.type == name:
+                if type in monster.type:
+                    found_monster_type = monster.type
                     for monster_instance in monster.monster_instances:
-                        if monster_instance.standeeNr == instance:
-                            monster_instance.health += health_change
+                        if monster_instance.standeeNr == standee_nr:
+                            found_standee_nr = standee_nr
+                            monster_instance.health = health
                             if monster_instance.health <= 0:
                                 monster.monster_instances.remove(monster_instance)
-                                logging.info(
-                                    f"Monster {name} with instance {instance} removed"
+                                self.logger.info(
+                                    f"Monster {monster.type} nr {standee_nr} killed"
                                 )
                             elif monster_instance.health > monster_instance.maxHealth:
                                 monster_instance.health = monster_instance.maxHealth
-                                logging.info(
-                                    f"Monster {name} with instance {instance} health set to maximum"
+                                self.logger.info(
+                                    f"Monster {monster.type} nr {standee_nr} health set to maximum"
                                 )
                             else:
-                                logging.info(
-                                    f"Monster {name} with instance {instance} health changed by {health_change}"
+                                self.logger.info(
+                                    f"Monster {monster.type} nr {standee_nr} health changed to {monster_instance.health}"
                                 )
+                            new_monster_health = monster_instance.health
+                            break
 
             # If the monster is not found, log an error
-            if not monster_updated:
-                logging.error(f"Monster {name} with instance {instance} not found")
-            else:
+            if found_monster_type and found_standee_nr != 0:
                 # If the monster is found, update the gamestate and send it to the Frosthaven Application
-                # Also create a toast message (TODO: to be removed later)
-                self.set_toast_message(
-                    f"Monster {name} with instance {instance} health changed by {health_change}"
-                )
+                self.description = f"Monster {found_monster_type} nr {found_standee_nr} health changed to {new_monster_health}"
                 self._update_client_network()
+            else:
+                self.logger.error(
+                    f"Monster {type} with instance {standee_nr} not found"
+                )
 
     def set_toast_message(self, message):
         # Set toast message
-        self.toastMessage = message
-        self._update_client_network()
+        with self.lock:  # Acquire the lock before modifying the gamestate
+            self.logger.info(f"Setting toast message to {message}")
+            self.description = f"Setting toast message to {message}"
+            self.toastMessage = message
+            self._update_client_network()
 
     def clear_toast_message(self):
         # Clear toast message by setting the toastMessage variable to an empty string
         with self.lock:  # Acquire the lock before modifying the gamestate
+            self.logger.info("Clearing toast message")
+            self.description = "Clearing toast message"
             self.toastMessage = ""
-
-            # Update the gamestate and send it to the Frosthaven Application
             self._update_client_network()
 
     def _update_client_network(self):
@@ -246,6 +361,7 @@ class GameState:
         # This method is called when a variable in the gamestate class is updated
         # The client network will then send the new gamestate to the Frosthaven Application
         if self.client_network:
+            self.index += 1
             new_gamestate = self._encode_gamestate(
                 self.index,
                 self.description,
@@ -253,16 +369,60 @@ class GameState:
             )
             self.client_network.send_data(new_gamestate)
 
+    # ----------------------------------------------
+    # Get data methods
+    # ----------------------------------------------
+    def get_character_info(self) -> list[tuple[str, str, int, int]]:
+        # Method to get the character information from the gamestate
+        # It loops through all characters and returns a list of all characters
+        # including the character id, character name, initiative, and health
+        if self.characters == []:
+            return []
+        
+        character_list = []
+        for character in self.characters:
+            self.logger.debug(
+                f"Character {character.id}, {character.characterState.display} has initiative {character.characterState.initiative} and health {character.characterState.health}"
+            )
+            character_list.append((character.id, character.characterState.display, character.characterState.initiative, character.characterState.health))
+        return character_list
+        
+    def get_monster_info(self) -> list[tuple[str, int, int]]:
+        # Method to get the monster information from the gamestate
+        # It loops through all monsters and returns a list of all monsters
+        # including the monster type, monster instance, and health
+        if self.monsters == []:
+            return []
+        
+        monster_list = []
+        for monster in self.monsters:
+            for monster_instance in monster.monster_instances:
+                self.logger.debug(
+                    f"Monster {monster.type} nr {monster_instance.standeeNr} has health {monster_instance.health}"
+                )
+                monster_list.append((monster.type, monster_instance.standeeNr, monster_instance.health))
+        return monster_list
+
 
 class Characters:
-    def __init__(self, character_dict):
+    def __init__(self, character_dict, character_names: dict) -> None:
         # Method to set the character information for each character
+        self.logger = logging.getLogger("xhaven_core.gamestate.characters")
         self.id = character_dict.get("id")
         self.turnState = character_dict.get("turnState")
         self.characterState = self._CharacterState(character_dict.get("characterState"))
         self.characterClass = character_dict.get("characterClass")
 
-        print(f"Character {self.characterClass} created")
+        self.logger.info(f"Character {self.characterClass} created")
+        
+        # Additional name for character, used for speech recognition and read from parameters file
+        
+        if self.id in character_names:
+            self.logger.info(f"Character {self.id} has name {character_names[self.id]}")
+            self.name = character_names[self.id]
+        else:
+            self.name = ""
+            
 
     def get_character(self):
         character_dict = {
@@ -310,6 +470,7 @@ class Characters:
 
 class Monsters:
     def __init__(self, monster_dict):
+        self.logger = logging.getLogger("xhaven_core.gamestate.monsters")
         self.monster_instances = []
         self.id = monster_dict.get("id")
         self.turnState = monster_dict.get("turnState")
@@ -320,7 +481,7 @@ class Monsters:
         self.isAlly = monster_dict.get("isAlly")
         self.level = monster_dict.get("level")
 
-        print(f"Monster {self.type} created")
+        self.logger.info(f"Monster {self.type} created")
 
     def get_monster(self):
         _monster_instances = []
