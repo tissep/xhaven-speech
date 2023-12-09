@@ -1,31 +1,110 @@
+from calendar import c
 import speech_recognition as sr
 import numpy as np
+import logging
+import logging.handlers
+import threading
+import winsound
 
 # create a recognizer object
 r = sr.Recognizer()
 
-keyword = 'Jarvis'
 
-# use the default microphone as the audio source
-while True:
-    input("Press enter to continue...")
-    
-    with sr.Microphone() as source:
-        # listen for audio and store it in audio_data variable
-        audio_data = r.listen(source)
-        print("Processing...")
-
-
-
-
-    # recognize speech using Google Speech Recognition
-    try:
-        text = r.recognize_whisper(audio_data)
-        #text = r.recognize_google(audio_data, language='sv-SE')
-        print(f"You said: {text}")
+class speech:
+    def __init__(self, game_class) -> None:
+        self.game_class = game_class
+        self.logger = logging.getLogger("xhaven_core.speech")
+        self.logger.setLevel(logging.DEBUG)
         
-    except sr.UnknownValueError:
-        print("Sorry, I could not understand what you said.")
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
+        file_handler = logging.FileHandler('xhaven_speech.log')
+        file_handler.setLevel(logging.DEBUG)  # Set the level of this handler
+        self.logger.info(f"Starting speech recognition...")
+        
+        # Start a new thread to handle receiving data
+        threading.Thread(target=self.start_recognition).start()
 
+        pass
+
+    def start_recognition(self):
+        # use the default microphone as the audio source
+        while True:
+            with sr.Microphone() as source:
+                # listen for audio and store it in audio_data variable
+                audio_data = r.listen(source)
+                print("Processing...")
+
+            # recognize speech using Google Speech Recognition
+            gamestate_updated = False
+            try:
+                # text = r.recognize_whisper(audio_data)
+                text = r.recognize_google(audio_data, language="sv-SE")
+                self.logger.debug(f"You said: {text} and type: {type(text)}")
+                if text is not None and type(text) == str:
+                    text_line = text.split(" ")
+
+                    # Check if the first word is "spelare"
+                    if text_line[0] == "spelare" and len(text_line) == 3:
+                        # Update character initiative with the given value
+                        # Example: spelare Hatchet 10
+                        try:
+                            name = text_line[1]
+                            initiative = int(text_line[2])
+                            gamestate_updated = self.game_class.update_initiative(name, initiative)
+                        except None:
+                            try:
+                                name = text_line[2]
+                                initiative = int(text_line[1])
+                                gamestate_updated = self.game_class.update_initiative(name, initiative)
+                            except ValueError:
+                                pass
+
+                    # Check if the first word is "monster"
+                    if text_line[0] == "monster" and len(text_line) in [4, 5]:
+                        # Update monster health with the given value
+                        # Example: monster Adam 3 skada/minus/damage 10-> Helath -= 10
+                        # Example: monster Adam 3 plus/hela 10 -> Health += 10
+                        # Example: monster Adam 3 gift/poison -> Poison monster 
+                        # Example: monster Adam 3 10 -> Health = 10
+                        # Example: monster Adam 3 död/döda -> Health = 0
+                                                
+                        try:
+                            monster_name = text_line[1]
+                            monster_nr = int(text_line[2])
+                            if "skada" in text_line[3] or "minus" in text_line[3] or "damage" in text_line[3]:
+                                try:
+                                    monster_health = -int(text_line[4])
+                                    gamestate_updated = self.game_class.update_monster_health(monster_name, monster_nr, monster_health, True)
+                                except:
+                                    pass
+                            elif "plus" in text_line[3] or "hela" in text_line[3]:
+                                try:
+                                    monster_health = int(text_line[4])
+                                    gamestate_updated = self.game_class.update_monster_health(monster_name, monster_nr, monster_health, True)
+                                except:
+                                    pass
+                            elif "död" in text_line[3]:
+                                gamestate_updated = self.game_class.update_monster_health(monster_name, monster_nr, 0, False)
+                            elif "gift" in text_line[3] or "poison" in text_line[3]:
+                                condition = "poison"
+                                gamestate_updated = self.game_class.update_monster_condition(monster_name, monster_nr, condition, True)
+                            elif len(text_line) == 4:
+                                try:
+                                    monster_health = int(text_line[3])
+                                    gamestate_updated = self.game_class.update_monster_health(monster_name, monster_nr, monster_health, False)
+                                except:
+                                    pass
+                        except:
+                            pass
+                        
+
+
+
+            except sr.UnknownValueError:
+                self.logger.debug("Sorry, I could not understand what you said.")
+            except sr.RequestError as e:
+                self.logger.debug(
+                    f"Could not request results from Google Speech Recognition service; {e}"
+                )
+            
+            if gamestate_updated:
+                winsound.PlaySound("ping.wav", winsound.SND_FILENAME)

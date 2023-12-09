@@ -1,8 +1,11 @@
 {
-  "host": "example.com",
-  "port": 8080,
+  "host": "localhost",
+  "port": 4567,
   "character_names": {
     "Hatchet": "Daniel",
     "Brute": "Jonathan"
+  },
+  "monster_names": {
+    "Lurker Clawcrusher": "Krabban"
   }
 }
