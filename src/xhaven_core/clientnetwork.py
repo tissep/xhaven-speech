@@ -16,17 +16,22 @@ It is also responsible for sending the gamestate to the app when it changes.
 #logger.addHandler(socket_handler)
 
 class ClientNetwork:
-    def __init__(self, GameState, host=None, port=4567):
+    def __init__(self, GameState, host="localhost", port=4567) -> None:
         self.logger = logging.getLogger('xhaven_core.clientnetwork')
-        self.host = host  # Replace with the actual host address
-        self.port = port  # Replace with the actual port number
+        self.logger.setLevel(logging.INFO)
+        
+        file_handler = logging.FileHandler('xhaven_speech.log')
+        file_handler.setLevel(logging.DEBUG)  # Set the level of this handler
+        self.logger.info(f"Starting network communication...")
+        
+        self.host = host
+        self.port = port
         self.socket = None
         self.is_running = False
         self.lock = threading.Lock()
         
         # Provide a reference to the gamestate class
         self.gamestate_class = GameState
-        self.logger.info("Initialized ClientNetwork")
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,7 +57,7 @@ class ClientNetwork:
                 elif b"GameState:" in data:
                     # When a new gamestate is recieved, update the gamestate class
                     # and log data received to log file
-                    self.logger.info("Received gamestate from server", extra={"data": data.decode()})
+                    self.logger.debug("Received gamestate from server", extra={"data": data.decode()})
                     self.gamestate_class.set_gamestate(data)
                 else:
                     # This should not happen, so log it to the log file as error
