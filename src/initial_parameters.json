@@ -1,9 +1,11 @@
 {
-  "host": "localhost",
+  "host": "192.168.1.57",
   "port": 4567,
   "character_names": {
-    "Hatchet": "Daniel",
-    "Brute": "Jonathan"
+    "Drifter": "Daniel",
+    "Geminate": "Jonathan",
+    "Crashing Tide": "Christian",
+    "Banner Spear": "Emil"
   },
   "monster_names": {
     "Lurker Clawcrusher": "Krabban"
